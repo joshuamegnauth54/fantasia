@@ -1,0 +1,41 @@
+version: '3.8'
+name: "fantasia"
+
+services:
+  database:
+    # Default port: 5432 on host and container
+    image: postgres:latest
+    restart: unless-stopped
+    ports:
+      - "${PGPORT}:${PGPORT}"
+    # Variables 
+    # https://www.postgresql.org/docs/current/libpq-envars.html
+    # https://hub.docker.com/_/postgres/
+    # PGUSER=
+    # POSTGRES_USER=
+    # PGPASSWORD=
+    # POSTGRES_PASSWORD=
+    # PGHOST=
+    # PGPORT=
+    # PGDATABASE=
+    # POSTGRES_DB=
+    # POSTGRES_INITDB_ARGS=
+    # DOCKER_HOST=
+    environment:
+      PGUSER: "${PGUSER}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      PGHOST: "${PGHOST}"
+      PGPORT: "${PGPORT}"
+      PGPASSWORD: "${PGPASSWORD}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      PGDATABASE: "${PGDATABASE}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_INITDB_ARGS: "${POSTGRES_INITDB_ARGS}"
+      DATABASE_URL: "${DATABASE_URL}"
+
+    volumes:
+      # postgresql.conf can also go in here
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

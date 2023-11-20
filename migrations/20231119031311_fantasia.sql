@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS fantasia(
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL
+);

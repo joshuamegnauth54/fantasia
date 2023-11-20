@@ -1,0 +1,59 @@
+[package]
+name = "fantasia"
+description = ""
+authors = ["Josh Megnauth <jo.sh@tutanota.com>"]
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/joshuamegnauth54/fantasia"
+license = "MIT"
+
+[package.metadata.docs.rs]
+all-features = true
+
+[profile.release]
+lto = true
+strip = "symbols"
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3
+
+[workspace]
+members = ["fantasia_web"]
+
+[dependencies]
+# Fantasia crates
+fantasia_web = { version = "0.1", path = "fantasia_web" }
+
+# Async
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+# CLI and config
+dotenvy = "0.15"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+# Errors
+anyhow = { version = "1", features = ["backtrace"] }
+
+# Logging
+tracing = "0.1"
+tracing-log = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+# For tests proper
+reqwest = { version = "0.11", features = ["rustls-tls"] }
+test-log = "0.2"
+env_logger = "0.10"
+
+[dev-dependencies.sqlx]
+version = "0.7"
+features = [
+  "chrono",
+  "macros",
+  "migrate",
+  "postgres",
+  "runtime-tokio",
+  "tls-rustls",
+  "uuid",
+]

@@ -1,0 +1,68 @@
+name: Rust
+
+on: [ push, pull_request ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Ensure Rust code is formatted
+        run: cargo fmt --all --check
+
+  test:
+    name: Run Rust tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: {{}}          
+          POSTGRES_PASSWORD: {{}}
+          POSTGRES_DB: {{}}
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli --no-default-features --features rustls,postgres
+      - name: sqlx migration
+        run: |
+          sudo apt-get install libpq-dev -y
+          ./launchpg.sh
+      - name: Check sqlx migrations
+        run: cargo sqlx prepare --workspace --check
+      - name: Check Rust code with clippy
+        run: cargo clippy --all-features --verbose
+
+  coverage:
+    name: Code coverage
+    runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin
+      options: --security-opt seccomp=unconfined
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo tarpaulin --all-features --workspace --verbose
+
+  build-linux:
+    name: Build project (Linux x64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: rui314/setup-mold@1
+      - name: Build
+        run: cargo build --all --release
+
+
