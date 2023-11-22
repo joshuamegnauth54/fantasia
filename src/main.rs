@@ -1,24 +1,35 @@
+mod args;
 mod config;
+mod telemetry;
 
 use anyhow::{Context, Result};
+use config::General;
 use fantasia_web::{app::Fantasia, PgPoolOptions};
-use config::{General, Postgres};
 // use tracing_log::LogTracer;
 
+use secrecy::ExposeSecret;
+use telemetry::logging;
+use tracing::info;
+
 #[tokio::main]
+#[tracing::instrument]
 async fn main() -> Result<()> {
-    // LogTracer::init().context("Failed to initialize LogTracer")?;
-    tracing_subscriber::fmt::init();
-    dotenvy::from_path("dev.env").unwrap();
+    logging().context("Failed to set a global logger")?;
 
-    let maybe_url = std::env::var("DATABASE_URL").ok();
-    let db_url = maybe_url.as_deref().unwrap();
+    info!("Loading settings");
+    let config = General::from_path("fantasia.toml").context("Could not load settings")?;
+    let db_url = config.postgres.database_url();
 
-    let fantasia =
-        Fantasia::new_from_addr("127.0.0.1:8000", PgPoolOptions::default(), db_url)
-            .await
-            .context("Failed to initialize Fantasia instance")?;
+    info!("Building Fantasia instance");
+    let fantasia = Fantasia::new_from_addr(
+        (config.host, config.port),
+        PgPoolOptions::default(),
+        db_url.expose_secret(),
+    )
+    .await
+    .context("Failed to initialize Fantasia instance")?;
 
+    info!("Starting server");
     fantasia
         .into_server()
         .context("Failed to build Hyper server")?
