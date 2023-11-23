@@ -19,13 +19,14 @@ pub struct General {
     /// Override `.env` path. Defaults to `.env` otherwise.
     pub env_file: Option<PathBuf>,
     /// Postgres server options.
+    #[serde(default)]
     pub postgres: Postgres,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Postgres {
     /// Superuser account name
-    user: SecretString,
+    user: String,
     /// Superuser password
     password: SecretString,
     /// Postgres host
@@ -35,6 +36,7 @@ pub struct Postgres {
     /// Database name
     database: String,
     /// Postgres pool options for [sqlx].
+    #[serde(default)]
     options: Option<PgOptions>,
 }
 
@@ -43,7 +45,14 @@ pub struct PgOptions {}
 
 impl Default for Postgres {
     fn default() -> Self {
-        unimplemented!()
+        Self {
+            user: "postgres".into(),
+            password: SecretString::new("postgres".into()),
+            host: "localhost".into(),
+            port: 5432,
+            database: "pgdb".into(),
+            options: None,
+        }
     }
 }
 
@@ -57,7 +66,7 @@ impl Postgres {
     pub fn database_url(&self) -> SecretString {
         Secret::new(format!(
             "postgres://{}:{}@{}:{}/{}",
-            self.user.expose_secret(),
+            self.user,
             self.password.expose_secret(),
             self.host,
             self.port,
@@ -117,7 +126,7 @@ impl General {
 
         // Override loaded settings with env vars
         if let Ok(user) = env::var("POSTGRES_USER").or_else(|_| env::var("PGUSER")) {
-            self.postgres.user = user.into();
+            self.postgres.user = user;
         }
 
         if let Ok(pass) = env::var("POSTGRES_PASSWORD").or_else(|_| env::var("PGPASSWORD")) {
