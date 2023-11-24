@@ -10,6 +10,8 @@ use secrecy::{ExposeSecret, Secret, SecretString};
 use serde::{de::Error as DeError, Deserialize};
 use tracing::{info, trace};
 
+use super::args::Args;
+
 #[derive(Deserialize, Debug)]
 pub struct General {
     /// Host to bind for the application (e.g. `localhost`)
@@ -96,35 +98,12 @@ impl General {
         toml::from_str(&config)
     }
 
-    /// Update configurations with Postgres environmental variables.
+    /// Update configurations with CLI options and Postgres environmental variables.
     ///
-    /// # Variables
-    /// | Variables                         | Description       |
-    /// | ---                               | ---               |
-    /// | `POSTGRES_USER` `PGUSER`          | Superuser         |
-    /// | `POSTGRES_PASSWORD` `PGPASSWORD`  | Superuser password |
-    /// | `PGHOST`                          | Postgres host     |
-    /// | `PGPORT`                          | Port for host     |
-    /// | `POSTGRES_DB` `PGDATABASE`        | Database name     |
-    ///
-    ///
+    /// CLI options override env vars which in turn override the config file.
     #[tracing::instrument(skip(self))]
-    pub fn dotenv(&mut self) -> Result<(), dotenvy::Error> {
-        match self.env_file.as_deref() {
-            Some(path) => {
-                dotenvy::from_path(path)?;
-                info!(
-                    "Environment loaded from overridden path: {}",
-                    path.display()
-                );
-            }
-            None => {
-                let path = dotenvy::dotenv()?;
-                info!("Environment loaded from default path: {}", path.display());
-            }
-        }
-
-        // Override loaded settings with env vars
+    pub fn augment(&mut self, args: Args) {
+        // Override loaded settings with CLI options and env vars
         if let Ok(user) = env::var("POSTGRES_USER").or_else(|_| env::var("PGUSER")) {
             self.postgres.user = user;
         }
@@ -144,7 +123,46 @@ impl General {
         if let Ok(database) = env::var("POSTGRES_DB").or_else(|_| env::var("PGDATABASE")) {
             self.postgres.database = database;
         }
-
-        Ok(())
     }
+}
+
+/// Load environment from a file or .env.
+///
+/// # Variables
+/// | Variables                         | Description       |
+/// | ---                               | ---               |
+/// | `POSTGRES_USER` `PGUSER`          | Superuser         |
+/// | `POSTGRES_PASSWORD` `PGPASSWORD`  | Superuser password |
+/// | `PGHOST`                          | Postgres host     |
+/// | `PGPORT`                          | Port for host     |
+/// | `POSTGRES_DB` `PGDATABASE`        | Database name     |
+///
+/// # Precedence
+/// From highest priority to lowest:
+/// * CLI arguments
+/// * Environmental variables
+/// * Config file
+///
+#[tracing::instrument]
+pub fn dotenv(env_file: Option<&Path>) -> Result<(), dotenvy::Error> {
+    match env_file {
+        Some(path) => {
+            // Fail here if the config provides a path to avoid surprises.
+            // It's better to let the app runner know that the path failed.
+            dotenvy::from_path(path)?;
+            info!(
+                "Environment loaded from overridden path: {}",
+                path.display()
+            );
+        }
+        None => {
+            if let Ok(path) = dotenvy::dotenv() {
+                info!("Environment loaded from default path: {}", path.display());
+            } else {
+                info!("Not using .env");
+            }
+        }
+    }
+
+    Ok(())
 }
