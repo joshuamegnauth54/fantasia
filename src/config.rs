@@ -13,6 +13,7 @@ use tracing::{info, trace};
 use super::args::Args;
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct General {
     /// Host to bind for the application (e.g. `localhost`)
     pub host: String,
@@ -26,6 +27,7 @@ pub struct General {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Postgres {
     /// Superuser account name
     user: String,
@@ -43,6 +45,7 @@ pub struct Postgres {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct PgOptions {}
 
 impl Default for Postgres {
@@ -104,23 +107,47 @@ impl General {
     #[tracing::instrument(skip(self))]
     pub fn augment(&mut self, args: Args) {
         // Override loaded settings with CLI options and env vars
-        if let Ok(user) = env::var("POSTGRES_USER").or_else(|_| env::var("PGUSER")) {
+
+        if let Some(host) = args.host {
+            self.host = host;
+        }
+
+        if let Some(port) = args.port {
+            self.port = port;
+        }
+
+        if let Some(user) = args
+            .pguser
+            .or_else(|| env::var("POSTGRES_USER").ok())
+            .or_else(|| env::var("PGUSER").ok())
+        {
             self.postgres.user = user;
         }
 
-        if let Ok(pass) = env::var("POSTGRES_PASSWORD").or_else(|_| env::var("PGPASSWORD")) {
-            self.postgres.password = pass.into();
+        if let Some(pass) = args
+            .pgpassword
+            .or_else(|| env::var("POSTGRES_PASSWORD").ok().map(SecretString::new))
+            .or_else(|| env::var("PGPASSWORD").ok().map(SecretString::new))
+        {
+            self.postgres.password = pass;
         }
 
-        if let Ok(host) = env::var("PGHOST") {
+        if let Some(host) = args.pghost.or_else(|| env::var("PGHOST").ok()) {
             self.postgres.host = host;
         }
 
-        if let Some(port) = env::var("PGPORT").ok().and_then(|port| port.parse().ok()) {
+        if let Some(port) = args
+            .pgport
+            .or_else(|| env::var("PGPORT").ok().and_then(|port| port.parse().ok()))
+        {
             self.postgres.port = port;
         }
 
-        if let Ok(database) = env::var("POSTGRES_DB").or_else(|_| env::var("PGDATABASE")) {
+        if let Some(database) = args
+            .pgdatabase
+            .or_else(|| env::var("POSTGRES_DB").ok())
+            .or_else(|| env::var("PGDATABASE").ok())
+        {
             self.postgres.database = database;
         }
     }

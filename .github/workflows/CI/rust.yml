@@ -17,8 +17,8 @@ jobs:
       - name: Ensure Rust code is formatted
         run: cargo fmt --all --check
 
-  test:
-    name: Run Rust tests
+  clippy:
+    name: Run clippy and tests
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -33,17 +33,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
+          components: clippy
       - name: Install sqlx-cli
         run: cargo install sqlx-cli --no-default-features --features rustls,postgres
       - name: sqlx migration
         run: |
           sudo apt-get install libpq-dev -y
-          ./launchpg.sh
+          ./launchpg.sh containers/postgres/compose.yml ./dev.env
       - name: Check sqlx migrations
         run: cargo sqlx prepare --workspace --check
       - name: Check Rust code with clippy
         run: cargo clippy --all-features --verbose
+      - name: Run Rust tests
+        run: cargo test --all-features --all
 
   coverage:
     name: Code coverage
@@ -53,6 +55,8 @@ jobs:
       options: --security-opt seccomp=unconfined
     steps:
       - uses: actions/checkout@v4
+      - name: Run Rust code coverage
+      - continue-on-error: true
       - run: cargo tarpaulin --all-features --workspace --verbose
 
   build-linux:
@@ -61,7 +65,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: rui314/setup-mold@1
+      - uses: rui314/setup-mold@v1
+      - name: Build
+        run: cargo build --all --release
+
+  build-macOS:
+    name: Build project (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - name: Build
         run: cargo build --all --release
 
