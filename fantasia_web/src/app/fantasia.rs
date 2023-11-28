@@ -2,6 +2,7 @@ use std::{io, net::SocketAddr};
 
 use axum::{routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
+use secrecy::{ExposeSecret, SecretString};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::{self, ToSocketAddrs};
 use tracing::{debug, info};
@@ -36,7 +37,7 @@ impl Fantasia {
     pub async fn new_from_addr(
         addr: impl ToSocketAddrs,
         options: PgPoolOptions,
-        url: &str,
+        url: &SecretString,
     ) -> io::Result<Fantasia> {
         info!("Retrieving socket addresses");
 
@@ -57,9 +58,9 @@ impl Fantasia {
             .ok_or(io::ErrorKind::AddrNotAvailable)?;
         info!("Using address: {listener}");
 
-        info!("Connecting to Postgres database at `{url}`");
+        info!("Connecting to Postgres database at `{url:?}`");
         let pool = options
-            .connect(url)
+            .connect(url.expose_secret())
             .await
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         info!("Successfully connected to the Postgres server");

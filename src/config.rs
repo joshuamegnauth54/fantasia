@@ -26,6 +26,7 @@ pub struct General {
     pub postgres: Postgres,
 }
 
+// TODO: Make this easier to format with Secret for logs
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Postgres {

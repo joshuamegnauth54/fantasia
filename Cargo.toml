@@ -46,7 +46,7 @@ secrecy = { version = "0.8", features = ["serde"] }
 
 [dev-dependencies]
 # For tests proper
-reqwest = { version = "0.11", features = ["rustls-tls"] }
+reqwest = { version = "0.11", features = ["rustls-tls", "trust-dns"] }
 test-log = "0.2"
 env_logger = "0.10"
 

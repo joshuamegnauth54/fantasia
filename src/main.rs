@@ -5,7 +5,6 @@ mod telemetry;
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use secrecy::ExposeSecret;
 use telemetry::logging;
 use tracing::info;
 // use tracing_log::LogTracer;
@@ -35,7 +34,7 @@ async fn main() -> Result<()> {
     let fantasia = Fantasia::new_from_addr(
         (config.host, config.port),
         PgPoolOptions::default(),
-        db_url.expose_secret(),
+        &db_url,
     )
     .await
     .context("Failed to initialize Fantasia instance")?;
