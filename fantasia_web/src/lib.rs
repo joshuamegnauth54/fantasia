@@ -5,8 +5,16 @@ pub mod state;
 // Reexports
 pub use sqlx::{postgres::PgPoolOptions, PgPool};
 
-use axum::{routing::IntoMakeService, Router};
-use hyper::server::conn::AddrIncoming;
+use std::net::SocketAddr;
 
-/// Hyper [hyper::Server] with bounds for a Fantasia instance
-pub type Server = axum::Server<AddrIncoming, IntoMakeService<Router>>;
+use axum::{
+    extract::{connect_info::IntoMakeServiceWithConnectInfo, ConnectInfo},
+    middleware::AddExtension,
+    serve, Router,
+};
+
+/// Axum's [axum::serve::Serve] with bounds for a Fantasia instance
+pub type Serve = serve::Serve<
+    IntoMakeServiceWithConnectInfo<Router, SocketAddr>,
+    AddExtension<Router, ConnectInfo<SocketAddr>>,
+>;

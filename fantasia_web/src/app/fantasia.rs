@@ -1,30 +1,37 @@
 use std::{io, net::SocketAddr};
 
-use axum::{routing::IntoMakeService, Router, Server};
-use hyper::server::conn::AddrIncoming;
+use axum::{
+    body::Body,
+    extract::{
+        connect_info::{Connected, IntoMakeServiceWithConnectInfo},
+        ConnectInfo,
+    },
+    http::Request,
+    middleware::AddExtension,
+    routing::IntoMakeService,
+    serve::{self, IncomingStream, Serve},
+    Router, ServiceExt,
+};
+use hyper::service::Service;
 use secrecy::{ExposeSecret, SecretString};
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use tokio::net::{self, ToSocketAddrs};
+use tokio::net::{self, TcpListener, ToSocketAddrs};
 use tracing::{debug, info};
 
 use crate::state::State;
 
 pub struct Fantasia {
     router: Router,
-    listener: SocketAddr,
-    state: State,
+    sockets: Vec<SocketAddr>,
 }
 
 impl Fantasia {
-    pub fn new(listener: SocketAddr, pool: PgPool) -> Fantasia {
-        let router = super::router::bind_routes();
+    pub fn new(sockets: &[SocketAddr], pool: PgPool) -> Fantasia {
+        let sockets = sockets.into_iter().map(|socket| *socket).collect();
         let state = State { pool };
+        let router = super::router::bind_routes(state);
 
-        Fantasia {
-            router,
-            listener,
-            state,
-        }
+        Fantasia { router, sockets }
     }
 
     /// Build a [Fantasia] instance from network addresses.
@@ -42,21 +49,19 @@ impl Fantasia {
         info!("Retrieving socket addresses");
 
         #[cfg(debug_assertions)]
-        let listener = {
+        let listeners = {
             let addrs: Vec<_> = net::lookup_host(addr).await?.collect();
             for sockaddr in &addrs {
                 debug!("Socket address: {sockaddr}");
             }
 
-            *addrs.first().ok_or(io::ErrorKind::AddrNotAvailable)?
+            // *addrs.first().ok_or(io::ErrorKind::AddrNotAvailable)?
+            addrs
         };
 
         #[cfg(not(debug_assertions))]
-        let listener = addr
-            .to_socket_addrs()?
-            .next()
-            .ok_or(io::ErrorKind::AddrNotAvailable)?;
-        info!("Using address: {listener}");
+        let listeners = addr.to_socket_addrs()?.collect();
+        // info!("Using address: {listener}");
 
         info!("Connecting to Postgres database at `{url:?}`");
         let pool = options
@@ -65,23 +70,29 @@ impl Fantasia {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         info!("Successfully connected to the Postgres server");
 
-        Ok(Fantasia::new(listener, pool))
+        Ok(Fantasia::new(&listeners, pool))
     }
 
-    pub fn into_server(
+    pub async fn into_server(
         self,
-    ) -> Result<Server<AddrIncoming, IntoMakeService<Router>>, hyper::Error> {
-        Server::try_bind(&self.listener).map(|server| server.serve(self.router.into_make_service()))
+    ) -> Serve<
+        IntoMakeServiceWithConnectInfo<Router, SocketAddr>,
+        AddExtension<Router, ConnectInfo<SocketAddr>>,
+    > {
+        let socket = self.sockets.into_iter().next().unwrap();
+        let socket = TcpListener::bind(socket).await.unwrap();
+
+        serve::serve(socket, self.router.into_make_service_with_connect_info())
     }
 }
 
-impl TryInto<Server<AddrIncoming, IntoMakeService<Router>>> for Fantasia {
-    type Error = hyper::Error;
-
-    fn try_into(self) -> Result<Server<AddrIncoming, IntoMakeService<Router>>, Self::Error> {
-        self.into_server()
-    }
-}
+// impl TryInto<Server<AddrIncoming, IntoMakeService<Router>>> for Fantasia {
+//     type Error = hyper::Error;
+//
+//     fn try_into(self) -> Result<Server<AddrIncoming, IntoMakeService<Router>>, Self::Error> {
+//         self.into_server()
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

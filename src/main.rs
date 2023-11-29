@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
     info!("Starting server");
     fantasia
         .into_server()
-        .context("Failed to build Hyper server")?
-        .await?;
+        // .context("Failed to build Hyper server")?
+        .await;
     Ok(())
 }

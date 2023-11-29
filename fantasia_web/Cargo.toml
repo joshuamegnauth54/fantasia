@@ -16,10 +16,10 @@ release_max_level_info = ["tracing/release_max_level_info"]
 
 [dependencies]
 # Main web crates
-axum = { version = "0.6", features = ["http2", "tracing"] }
-hyper = { version = "0.14.27", features = ["http2", "server"] }
+axum = { version = "0.7", features = ["http2", "tracing"] }
+hyper = { version = "1", features = ["http2", "server"] }
 serde = { version = "1.0", features = ["derive"] }
-tower-http = { version = "0.4", features = ["trace"] }
+tower-http = { version = "0.5", features = ["trace"] }
 
 # Async
 tokio = { version = "1", features = ["net"] }
