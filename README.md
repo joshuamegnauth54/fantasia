@@ -2,7 +2,13 @@
 
 # Fantasia
 
+# Hosting a server
+
+# Clients
+
 # Configuration
+
+## Config file
 
 ## Environmental variables
 | Variables                         | Description           |

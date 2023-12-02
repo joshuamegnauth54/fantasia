@@ -493,6 +493,7 @@ dependencies = [
  "dotenvy",
  "env_logger",
  "fantasia_web",
+ "futures",
  "pico-args",
  "reqwest",
  "secrecy",
@@ -508,9 +509,10 @@ dependencies = [
 
 [[package]]
 name = "fantasia_web"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
+ "futures",
  "hyper 1.0.1",
  "reqwest",
  "rspotify",

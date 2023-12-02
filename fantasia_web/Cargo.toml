@@ -2,7 +2,7 @@
 name = "fantasia_web"
 description = "Back-end web service for fantasia"
 authors = ["Josh Megnauth <jo.sh@tutanota.com>"]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 repository = "https://github.com/joshuamegnauth54/fantasia"
 license = "MIT"
@@ -22,6 +22,7 @@ serde = { version = "1.0", features = ["derive"] }
 tower-http = { version = "0.5", features = ["trace"] }
 
 # Async
+futures = "0.3"
 tokio = { version = "1", features = ["net"] }
 
 # Logging and errors

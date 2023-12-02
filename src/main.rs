@@ -5,6 +5,7 @@ mod telemetry;
 use std::path::Path;
 
 use anyhow::{Context, Result};
+use futures::future::join_all;
 use telemetry::logging;
 use tracing::info;
 // use tracing_log::LogTracer;
@@ -40,9 +41,19 @@ async fn main() -> Result<()> {
     .context("Failed to initialize Fantasia instance")?;
 
     info!("Starting server");
-    fantasia
-        .into_server()
-        // .context("Failed to build Hyper server")?
-        .await;
+    let results = join_all(
+        fantasia
+            .into_server()
+            // .context("Failed to build Hyper server")?
+            .await
+            .into_iter()
+            .map(|sock_res| async { sock_res.expect("Binding to socket should succeed").await }),
+    )
+    .await;
+
+    for result in results {
+        result.context("Spawned Fantasia instance crashed")?;
+    }
+
     Ok(())
 }
