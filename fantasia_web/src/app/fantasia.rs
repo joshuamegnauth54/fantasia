@@ -8,7 +8,7 @@ use futures::future::{join_all, JoinAll};
 use secrecy::{ExposeSecret, SecretString};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::{self, TcpListener, ToSocketAddrs};
-use tracing::{debug, info};
+use tracing::{debug, info, trace};
 
 use crate::{state::State, Serve};
 
@@ -67,16 +67,28 @@ impl Fantasia {
         Ok(Fantasia::new(&addrs, pool))
     }
 
+    /// Build a running server from a [Fantasia] instance.
+    #[tracing::instrument(skip(self))]
     pub fn into_server(self) -> JoinAll<impl Future<Output = io::Result<Serve>>> {
+        trace!("Binding to sockets");
+
         let Self { sockets, router } = self;
 
         join_all(
             sockets
                 .into_iter()
-                .map(TcpListener::bind)
+                // `router` needs to be cloned and moved into the async closure
                 .zip(iter::repeat(router))
-                .map(|(listener, router)| async {
-                    listener.await.map(|listener| {
+                .inspect(|(addr, _)| info!("Asynchronously binding to socket address: {addr}"))
+                // I'm not sure how to return a Result<JoinAll<_>, _> that simply evaluates to a
+                // future that yields `Serve`. This returns
+                // `JoinAll<impl Future<Output = io::Result<Serve>>>`
+                // which is not ideal because the future that binds the sockets must be evaluated
+                // followed by handling any errors followed by awaiting the actual servers
+                // (Actually, this may be a good thing for maximum flexibility but it seems kind of
+                // ugly to me...but what do I know?)
+                .map(|(addr, router)| async move {
+                    TcpListener::bind(addr).await.map(|listener| {
                         serve::serve(
                             listener,
                             router.into_make_service_with_connect_info::<SocketAddr>(),

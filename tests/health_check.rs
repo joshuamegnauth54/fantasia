@@ -1,8 +1,9 @@
 mod common;
-use std::future::IntoFuture;
-
 use common::{spawn, test_client, TestServer};
 
+use std::future::IntoFuture;
+
+use reqwest::StatusCode;
 use sqlx::PgPool;
 use test_log::test;
 use tracing::info;
@@ -27,5 +28,5 @@ async fn health_check_works(pool: PgPool) {
         .send()
         .await
         .unwrap_or_else(|e| panic!("Should be able to send a GET request ({endpoint})\n\r{e}"));
-    assert_eq!(200, response.status());
+    assert_eq!(StatusCode::OK, response.status());
 }

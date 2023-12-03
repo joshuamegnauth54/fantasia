@@ -3,6 +3,7 @@ pub mod routes;
 pub mod state;
 
 // Reexports
+pub use axum::http::StatusCode;
 pub use sqlx::{postgres::PgPoolOptions, PgPool};
 
 use std::net::SocketAddr;

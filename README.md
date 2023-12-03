@@ -8,7 +8,10 @@
 
 # Configuration
 
-## Config file
+`Fantasia` is configured through CLI options, environmental variables, and a config file.
+This is also the order of precedence for configs. CLI opts override env vars which overrides the config.
+
+## CLI options
 
 ## Environmental variables
 | Variables                         | Description           |
@@ -19,3 +22,6 @@
 | `PGPORT`                          | Port for host         |
 | `POSTGRES_DB` `PGDATABASE`        | Database name         |
 
+## Config file
+
+`Fantasia`'s config file is a [TOML](https://toml.io/en/) with the following tables and keys.
