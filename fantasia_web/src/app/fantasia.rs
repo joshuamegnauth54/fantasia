@@ -12,22 +12,32 @@ use tracing::{debug, info, trace};
 
 use crate::{state::State, Serve};
 
-pub struct Fantasia {
+pub struct FantasiaBuilder {
     router: Router,
     sockets: Vec<SocketAddr>,
 }
 
-impl Fantasia {
+#[derive(Debug)]
+pub struct Fantasia {
+    /// Local socket address for this instance.
+    ///
+    /// An address that binds to any port, such as `[::]:0`, doesn't reveal its local address until
+    /// it is bound.
+    pub sock_addr: SocketAddr,
+    pub server: Serve,
+}
+
+impl FantasiaBuilder {
     /// Construct [Fantasia] instances from parsed [SocketAddr]s.
     #[tracing::instrument]
-    pub fn new(sockets: &[SocketAddr], pool: PgPool) -> Fantasia {
+    pub fn new(sockets: &[SocketAddr], pool: PgPool) -> FantasiaBuilder {
         let sockets = sockets.to_vec();
         debug!("{} socket addresses", sockets.len());
 
         let state = State { pool };
         let router = super::router::bind_routes(state);
 
-        Fantasia { router, sockets }
+        FantasiaBuilder { router, sockets }
     }
 
     /// Build [Fantasia] instances by resolving network addresses and connecting to Postgres.
@@ -43,7 +53,7 @@ impl Fantasia {
         addrs: impl ToSocketAddrs,
         options: PgPoolOptions,
         url: &SecretString,
-    ) -> io::Result<Fantasia> {
+    ) -> io::Result<FantasiaBuilder> {
         info!("Retrieving socket addresses");
 
         // Asynchronously look up provided addresses.
@@ -64,12 +74,12 @@ impl Fantasia {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         info!("Successfully connected to the Postgres server");
 
-        Ok(Fantasia::new(&addrs, pool))
+        Ok(FantasiaBuilder::new(&addrs, pool))
     }
 
     /// Build a running server from a [Fantasia] instance.
     #[tracing::instrument(skip(self))]
-    pub fn into_server(self) -> JoinAll<impl Future<Output = io::Result<Serve>>> {
+    pub fn into_server(self) -> JoinAll<impl Future<Output = io::Result<Fantasia>>> {
         trace!("Binding to sockets");
 
         let Self { sockets, router } = self;
@@ -82,17 +92,20 @@ impl Fantasia {
                 .inspect(|(addr, _)| info!("Asynchronously binding to socket address: {addr}"))
                 // I'm not sure how to return a Result<JoinAll<_>, _> that simply evaluates to a
                 // future that yields `Serve`. This returns
-                // `JoinAll<impl Future<Output = io::Result<Serve>>>`
+                // `JoinAll<impl Future<Output = io::Result<Fantasia>>>`
                 // which is not ideal because the future that binds the sockets must be evaluated
                 // followed by handling any errors followed by awaiting the actual servers
                 // (Actually, this may be a good thing for maximum flexibility but it seems kind of
                 // ugly to me...but what do I know?)
                 .map(|(addr, router)| async move {
-                    TcpListener::bind(addr).await.map(|listener| {
-                        serve::serve(
-                            listener,
-                            router.into_make_service_with_connect_info::<SocketAddr>(),
-                        )
+                    TcpListener::bind(addr).await.and_then(|listener| {
+                        Ok(Fantasia {
+                            sock_addr: listener.local_addr()?,
+                            server: serve::serve(
+                                listener,
+                                router.into_make_service_with_connect_info::<SocketAddr>(),
+                            ),
+                        })
                     })
                 }),
         )
@@ -109,5 +122,5 @@ impl Fantasia {
 
 #[cfg(test)]
 mod tests {
-    use super::Fantasia;
+    use super::FantasiaBuilder;
 }

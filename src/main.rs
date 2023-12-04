@@ -12,7 +12,7 @@ use tracing::info;
 
 use args::Args;
 use config::General;
-use fantasia_web::{app::Fantasia, PgPoolOptions};
+use fantasia_web::{app::FantasiaBuilder, PgPoolOptions};
 
 #[tokio::main]
 #[tracing::instrument]
@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
     let db_url = config.postgres.database_url();
 
     info!("Building Fantasia instance");
-    let fantasia = Fantasia::new_from_addr(
+    let fantasia = FantasiaBuilder::new_from_addr(
         (config.host, config.port),
         PgPoolOptions::default(),
         &db_url,
@@ -47,7 +47,12 @@ async fn main() -> Result<()> {
             // .context("Failed to build Hyper server")?
             .await
             .into_iter()
-            .map(|sock_res| async { sock_res.expect("Binding to socket should succeed").await }),
+            .map(|sock_res| async {
+                sock_res
+                    .expect("Binding to a local socket should succeed")
+                    .server
+                    .await
+            }),
     )
     .await;
 
