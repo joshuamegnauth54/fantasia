@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
     let mut config = General::from_path(conf_path).context("Could not load settings")?;
     config::dotenv(config.env_file.as_deref()).context("Invalid .env file")?;
     config.augment(args);
-    let db_url = config.postgres.database_url();
+    let db_url = config.postgres.database_url_view();
 
     info!("Building Fantasia instance");
     let fantasia = FantasiaBuilder::new_from_addr(

@@ -1,11 +1,11 @@
-use std::{future::Future, io, iter, net::SocketAddr};
+use std::{fmt::Debug, future::Future, io, iter, net::SocketAddr};
 
 use axum::{
     serve::{self},
     Router,
 };
 use futures::future::{join_all, JoinAll};
-use secrecy::{ExposeSecret, SecretString};
+use secrecy::ExposeSecret;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::{self, TcpListener, ToSocketAddrs};
 use tracing::{debug, info, trace};
@@ -49,11 +49,14 @@ impl FantasiaBuilder {
     /// * `options` - Options for the Postgres [sqlx::PgPool]
     /// * `url` - Postgres server URL
     #[tracing::instrument(skip(addrs))]
-    pub async fn new_from_addr(
+    pub async fn new_from_addr<S>(
         addrs: impl ToSocketAddrs,
         options: PgPoolOptions,
-        url: &SecretString,
-    ) -> io::Result<FantasiaBuilder> {
+        url: &S,
+    ) -> io::Result<FantasiaBuilder>
+    where
+        S: ExposeSecret<String> + Debug,
+    {
         info!("Retrieving socket addresses");
 
         // Asynchronously look up provided addresses.

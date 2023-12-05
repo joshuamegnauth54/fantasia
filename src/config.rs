@@ -1,6 +1,6 @@
 use std::{
     env,
-    fmt::Debug,
+    fmt::{self, Debug},
     fs::File,
     io::{BufReader, Read},
     path::{Path, PathBuf},
@@ -49,6 +49,15 @@ pub struct Postgres {
 #[serde(deny_unknown_fields)]
 pub struct PgOptions {}
 
+pub struct DatabaseUrlView<'s> {
+    pub user: &'s str,
+    pub password: &'s SecretString,
+    pub host: &'s str,
+    pub port: u16,
+    pub database: &'s str,
+    pub url: SecretString,
+}
+
 impl Default for Postgres {
     fn default() -> Self {
         Self {
@@ -59,6 +68,22 @@ impl Default for Postgres {
             database: "pgdb".into(),
             options: None,
         }
+    }
+}
+
+impl ExposeSecret<String> for DatabaseUrlView<'_> {
+    fn expose_secret(&self) -> &String {
+        self.url.expose_secret()
+    }
+}
+
+impl Debug for DatabaseUrlView<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "postgres://{}:{:?}@{}:{}/{}",
+            self.user, self.password, self.host, self.port, self.database
+        )
     }
 }
 
@@ -78,6 +103,17 @@ impl Postgres {
             self.port,
             self.database
         ))
+    }
+
+    pub fn database_url_view(&self) -> DatabaseUrlView<'_> {
+        DatabaseUrlView {
+            user: &self.user,
+            password: &self.password,
+            host: &self.host,
+            port: self.port,
+            database: &self.database,
+            url: self.database_url(),
+        }
     }
 }
 
