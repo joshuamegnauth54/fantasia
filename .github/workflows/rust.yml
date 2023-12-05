@@ -4,6 +4,7 @@ on: [ push, pull_request ]
 
 env:
   CARGO_TERM_COLOR: always
+  SKIP_DOCKER: true
 
 jobs:
   fmt:
@@ -62,10 +63,24 @@ jobs:
   build-linux:
     name: Build project (Linux x64)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: rui314/setup-mold@v1
+      - name: Postgres
+        run: |
+          sudo apt-get install libpq-dev
+          cargo install sqlx-cli --no-default-features --features rustls,postgres
+          ./launchpg.sh containers/postgres/compose.yml ./dev.env
       - name: Build
         run: cargo build --all --release
 
