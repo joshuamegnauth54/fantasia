@@ -1,4 +1,5 @@
-![license](https://img.shields.io/github/license/joshuamegnauth54/fantasia)
+[![license](https://img.shields.io/github/license/joshuamegnauth54/fantasia)](https://github.com/joshuamegnauth54/fantasia/blob/main/LICENSE)
+[![tokei](https://tokei.rs/b1/github/joshuamegnauth54/fantasia)](https://github.com/XAMPPRocky/tokei)
 
 # Fantasia
 

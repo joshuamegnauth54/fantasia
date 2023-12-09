@@ -14,19 +14,27 @@ use super::args::Args;
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct General {
+pub struct Config {
+    /// Server options for the app as a whole.
+    pub fantasia: Application,
+    /// Postgres server options.
+    #[serde(default)]
+    pub postgres: Postgres,
+}
+
+/// General application options, such as the socket address for the server.
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct Application {
     /// Host to bind for the application (e.g. `localhost`)
     pub host: String,
     /// `host`'s port
     pub port: u16,
     /// Override `.env` path. Defaults to `.env` otherwise.
     pub env_file: Option<PathBuf>,
-    /// Postgres server options.
-    #[serde(default)]
-    pub postgres: Postgres,
 }
 
-// TODO: Make this easier to format with Secret for logs
+/// Postgres connection options
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Postgres {
@@ -49,6 +57,7 @@ pub struct Postgres {
 #[serde(deny_unknown_fields)]
 pub struct PgOptions {}
 
+/// View into the parameters used to build the Postgres database URL.
 pub struct DatabaseUrlView<'s> {
     pub user: &'s str,
     pub password: &'s SecretString,
@@ -117,10 +126,10 @@ impl Postgres {
     }
 }
 
-impl General {
+impl Config {
     /// Load configuration file from `path`.
     #[tracing::instrument(name = "config from TOML")]
-    pub fn from_path<P>(path: P) -> Result<General, toml::de::Error>
+    pub fn from_path<P>(path: P) -> Result<Config, toml::de::Error>
     where
         P: AsRef<Path> + Debug,
     {
@@ -146,11 +155,11 @@ impl General {
         // Override loaded settings with CLI options and env vars
 
         if let Some(host) = args.host {
-            self.host = host;
+            self.fantasia.host = host;
         }
 
         if let Some(port) = args.port {
-            self.port = port;
+            self.fantasia.port = port;
         }
 
         if let Some(user) = args

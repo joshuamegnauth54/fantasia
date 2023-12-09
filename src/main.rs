@@ -11,7 +11,7 @@ use tracing::info;
 // use tracing_log::LogTracer;
 
 use args::Args;
-use config::General;
+use config::Config;
 use fantasia_web::{app::FantasiaBuilder, PgPoolOptions};
 
 #[tokio::main]
@@ -26,14 +26,14 @@ async fn main() -> Result<()> {
         .unwrap_or_else(|| Path::new("fantasia.toml"));
 
     info!("Loading settings");
-    let mut config = General::from_path(conf_path).context("Could not load settings")?;
-    config::dotenv(config.env_file.as_deref()).context("Invalid .env file")?;
+    let mut config = Config::from_path(conf_path).context("Could not load settings")?;
+    config::dotenv(config.fantasia.env_file.as_deref()).context("Invalid .env file")?;
     config.augment(args);
     let db_url = config.postgres.database_url_view();
 
     info!("Building Fantasia instance");
     let fantasia = FantasiaBuilder::new_from_addr(
-        (config.host, config.port),
+        (config.fantasia.host, config.fantasia.port),
         PgPoolOptions::default(),
         &db_url,
     )

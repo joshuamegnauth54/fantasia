@@ -5,6 +5,7 @@ on: [ push, pull_request ]
 env:
   CARGO_TERM_COLOR: always
   SKIP_DOCKER: true
+  SQLX_FEATURES: "rustls,postgres"
 
 jobs:
   fmt:
@@ -36,10 +37,11 @@ jobs:
         with:
           components: clippy
       - name: Install sqlx-cli
-        run: cargo install sqlx-cli --no-default-features --features rustls,postgres
+        run: cargo install sqlx-cli --no-default-features --features ${{ env.SQLX_FEATURES }}
       - name: sqlx migration
         run: |
-          sudo apt-get install libpq-dev -y
+          sudo apt-get update
+          sudo apt-get install libpq-dev postgresql-client -y
           ./launchpg.sh containers/postgres/compose.yml ./dev.env
       - name: Check sqlx migrations
         run: cargo sqlx prepare --workspace --check
@@ -78,8 +80,9 @@ jobs:
       - uses: rui314/setup-mold@v1
       - name: Postgres
         run: |
-          sudo apt-get install libpq-dev
-          cargo install sqlx-cli --no-default-features --features rustls,postgres
+          sudo apt-get update
+          sudo apt-get install libpq-dev postgresql-client -y
+          cargo install sqlx-cli --no-default-features --features ${{ env.SQLX_FEATURES }}
           ./launchpg.sh containers/postgres/compose.yml ./dev.env
       - name: Build
         run: cargo build --all --release
