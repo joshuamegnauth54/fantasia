@@ -6,6 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use fantasia_web::PgPoolOptions;
 use secrecy::{ExposeSecret, Secret, SecretString};
 use serde::{de::Error as DeError, Deserialize};
 use tracing::{info, trace};
@@ -16,6 +17,7 @@ use super::args::Args;
 #[serde(deny_unknown_fields)]
 pub struct Config {
     /// Server options for the app as a whole.
+    #[serde(default)]
     pub fantasia: Application,
     /// Postgres server options.
     #[serde(default)]
@@ -39,23 +41,19 @@ pub struct Application {
 #[serde(deny_unknown_fields)]
 pub struct Postgres {
     /// Superuser account name
-    user: String,
+    pub user: String,
     /// Superuser password
-    password: SecretString,
+    pub password: SecretString,
     /// Postgres host
-    host: String,
+    pub host: String,
     /// Postgres host's port
-    port: u16,
+    pub port: u16,
     /// Database name
-    database: String,
+    pub database: String,
     /// Postgres pool options for [sqlx].
-    #[serde(default)]
-    options: Option<PgOptions>,
+    #[serde(with = "super::pool_options", default)]
+    pub options: Option<PgPoolOptions>,
 }
-
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct PgOptions {}
 
 /// View into the parameters used to build the Postgres database URL.
 pub struct DatabaseUrlView<'s> {
@@ -65,19 +63,6 @@ pub struct DatabaseUrlView<'s> {
     pub port: u16,
     pub database: &'s str,
     pub url: SecretString,
-}
-
-impl Default for Postgres {
-    fn default() -> Self {
-        Self {
-            user: "postgres".into(),
-            password: SecretString::new("postgres".into()),
-            host: "localhost".into(),
-            port: 5432,
-            database: "pgdb".into(),
-            options: None,
-        }
-    }
 }
 
 impl ExposeSecret<String> for DatabaseUrlView<'_> {
@@ -93,6 +78,29 @@ impl Debug for DatabaseUrlView<'_> {
             "postgres://{}:{:?}@{}:{}/{}",
             self.user, self.password, self.host, self.port, self.database
         )
+    }
+}
+
+impl Default for Application {
+    fn default() -> Self {
+        Self {
+            host: "localhost".into(),
+            port: 8000,
+            env_file: None,
+        }
+    }
+}
+
+impl Default for Postgres {
+    fn default() -> Self {
+        Self {
+            user: "postgres".into(),
+            password: SecretString::new("postgres".into()),
+            host: "localhost".into(),
+            port: 5432,
+            database: "pgdb".into(),
+            options: None,
+        }
     }
 }
 

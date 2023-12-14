@@ -1,5 +1,6 @@
 mod args;
 mod config;
+mod pool_options;
 mod telemetry;
 
 use std::path::Path;

@@ -6,10 +6,11 @@
 * Update `launchpg.sh` to handle skipping Docker (like in `Zero2Prod`)
 * Update CI/CD to skip Docker
 * Better handling of `DATABASE_URL` for logs. Currently it's _all_ `redacted` instead of just the secret
+* Add `Tower`'s tracing middleware
+* `404` default handler
 
 # Unfinished
 * Better logging (log to file et cetera).
 * TLS
 * Serde for PgPoolOptions
-* Add `Tower`'s tracing middleware
-* `404` default handler
+* Clean up tracing

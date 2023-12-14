@@ -48,8 +48,8 @@ secrecy = { version = "0.8", features = ["serde"] }
 [dev-dependencies]
 # For tests proper
 reqwest = { version = "0.11", features = ["rustls-tls", "trust-dns"] }
-test-log = "0.2"
-env_logger = "0.10"
+test-log = { version = "0.2", default-features = false, features = ["trace"] }
+# env_logger = "0.10"
 
 [dev-dependencies.sqlx]
 version = "0.7"

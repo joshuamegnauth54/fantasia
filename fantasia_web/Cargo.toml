@@ -22,7 +22,12 @@ serde = { version = "1.0", features = ["derive"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = [
   "compression-br",
+  "compression-deflate",
+  "compression-gzip",
   "decompression-br",
+  "decompression-deflate",
+  "decompression-gzip",
+  "normalize-path",
   "request-id",
   "timeout",
   "trace",
