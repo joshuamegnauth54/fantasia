@@ -18,6 +18,7 @@ if [ "${1}" = "" ]; then
 	echo "Compose config path default: ${COMPOSE_CONF}"
 else
 	COMPOSE_CONF="${1}"
+	echo "Compose config path override: ${COMPOSE_CONF}"
 fi
 
 if [ "${2}" = "" ]; then
@@ -25,6 +26,7 @@ if [ "${2}" = "" ]; then
 	echo "Env file path default: ${ENV_PATH}"
 else
 	ENV_PATH="${2}"
+	echo "Env file path override: ${ENV_PATH}"
 fi
 
 if [ "${3}" = "" ]; then
@@ -32,6 +34,7 @@ if [ "${3}" = "" ]; then
 	echo "Migration path default: ${MIGRATIONS_PATH}"
 else
 	MIGRATIONS_PATH="${3}"
+	echo "Migration path override: ${MIGRATIONS_PATH}"
 fi
 
 # Check for required binaries
@@ -48,22 +51,26 @@ if ! [ -x "$(command -v sqlx)" ]; then
 	printf "\tcargo install sqlx-cli --no-default-features --features rustls,postgres\n"
 fi
 
-# .env is required or else postgres doesn't launch
-if ! [ -e "$ENV_PATH" ]; then
+# .env is required for containerized postgres
+if ! [ -e "$ENV_PATH" ] && [ "$SKIP_DOCKER" = "" ] || [ "$SKIP_DOCKER" = "false" ]; then
 	printf "Missing: \".env\"\n"
-	printf "You need an environment file to pass to postgres\n"
+	printf "You need an environment file to pass to Docker for postgres\n"
 	usage
 	exit 1
 fi
 
-if ! [ -e "$COMPOSE_CONF" ]; then
+# Docker compose config is required if using Docker
+if ! [ -e "$COMPOSE_CONF" ] && [ "$SKIP_DOCKER" = "" ] || [ "$SKIP_DOCKER" = false ]; then
 	printf "Missing a Docker Compose configuration file\n"
 	usage
 	exit 1
 fi
 
-# Source .env for pg_isready
-. "$ENV_PATH"
+# Source .env for pg_isready if DATABASE_URL isn't set
+if [ "$DATABASE_URL" = "" ]; then
+	. "$ENV_PATH"
+	export DATABASE_URL
+fi
 
 if [ "$SKIP_DOCKER" != true ]; then
 	# Launch docker and detach so that it runs in the background

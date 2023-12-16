@@ -8,9 +8,11 @@
 * Better handling of `DATABASE_URL` for logs. Currently it's _all_ `redacted` instead of just the secret
 * Add `Tower`'s tracing middleware
 * `404` default handler
+* Serde for PgPoolOptions
 
 # Unfinished
 * Better logging (log to file et cetera).
 * TLS
-* Serde for PgPoolOptions
 * Clean up tracing
+* Handle multiple socket addresses in config
+* Secret passwords in config

@@ -42,7 +42,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install libpq-dev postgresql-client -y
-          ./launchpg.sh containers/postgres/compose.yml ./dev.env
+          ./launchpg.sh containers/postgres/compose.yaml ./dev.env
       - name: Check sqlx migrations
         run: cargo sqlx prepare --workspace --check
       - name: Check Rust code with clippy
@@ -83,16 +83,25 @@ jobs:
           sudo apt-get update
           sudo apt-get install libpq-dev postgresql-client -y
           cargo install sqlx-cli --no-default-features --features ${{ env.SQLX_FEATURES }}
-          ./launchpg.sh containers/postgres/compose.yml ./dev.env
+          ./launchpg.sh containers/postgres/compose.yaml ./dev.env
       - name: Build
         run: cargo build --all --release
 
   build-macOS:
     name: Build project (macOS)
     runs-on: macos-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: $${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: $${{ secrets.POSTGRES_DB }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - name: Postgres
+        run: ./launchpg.sh containers/postgres/compose.yaml ./dev.env
       - name: Build
         run: cargo build --all --release
 

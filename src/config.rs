@@ -13,7 +13,7 @@ use tracing::{info, trace};
 
 use super::args::Args;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     /// Server options for the app as a whole.
@@ -25,7 +25,7 @@ pub struct Config {
 }
 
 /// General application options, such as the socket address for the server.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Application {
     /// Host to bind for the application (e.g. `localhost`)
@@ -246,4 +246,76 @@ pub fn dotenv(env_file: Option<&Path>) -> Result<(), dotenvy::Error> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use secrecy::ExposeSecret;
+    use test_log::test;
+
+    use super::{dotenv, Application, Config, Postgres};
+    use crate::args::Args;
+
+    #[test]
+    fn dotenv_example_env_succeeds() -> Result<(), dotenvy::Error> {
+        let path = format!("{}/dev.env", env!("CARGO_MANIFEST_DIR"));
+        let path = Path::new(&path);
+
+        dotenv(Some(path))
+    }
+
+    #[test]
+    fn parse_incomplete_conf_succeeds() -> Result<(), toml::de::Error> {
+        let path = format!("{}/fantasia_small.toml", env!("CARGO_MANIFEST_DIR"));
+        Config::from_path(path).map(|_| ())
+    }
+
+    #[test]
+    fn parse_complete_conf_succeeds() -> Result<(), toml::de::Error> {
+        let path = format!("{}/fantasia_full.toml", env!("CARGO_MANIFEST_DIR"));
+        Config::from_path(path).map(|_| ())
+    }
+
+    #[test]
+    fn augmenting_config_succeeds() {
+        let mut config = Config::default();
+        let args = Args {
+            conf: None,
+            host: None,
+            port: Some(666),
+            pguser: Some("NotJosh".into()),
+            pgpassword: Some("gaben".to_string().into()),
+            pghost: None,
+            pgport: None,
+            pgdatabase: None,
+        };
+
+        config.augment(args);
+        let expected = Config {
+            fantasia: Application {
+                port: 666,
+                ..Default::default()
+            },
+            postgres: Postgres {
+                user: "NotJosh".into(),
+                password: "gaben".to_string().into(),
+                ..Default::default()
+            },
+        };
+
+        assert_eq!(expected.fantasia, config.fantasia);
+        assert_eq!(expected.postgres.user, config.postgres.user);
+        assert_eq!(
+            expected.postgres.password.expose_secret(),
+            config.postgres.password.expose_secret()
+        );
+        assert_eq!(expected.postgres.host, config.postgres.host);
+        assert_eq!(expected.postgres.database, config.postgres.database);
+        assert_eq!(
+            expected.postgres.options.is_none(),
+            config.postgres.options.is_none()
+        );
+    }
 }

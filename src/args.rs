@@ -4,6 +4,7 @@ use pico_args::Arguments;
 use secrecy::SecretString;
 use tracing::error;
 
+/// Command line arguments.
 #[derive(Debug)]
 pub struct Args {
     /// Override config file
@@ -25,6 +26,9 @@ pub struct Args {
 }
 
 impl Args {
+    /// Parse CLI arguments.
+    ///
+    /// This returns an error on spurious arguments.
     #[tracing::instrument]
     pub fn parse_args() -> Result<Self, pico_args::Error> {
         let mut pargs = Arguments::from_env();
@@ -56,5 +60,3 @@ impl Args {
         }
     }
 }
-
-// fn parse_port(s: &str)

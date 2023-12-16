@@ -12,7 +12,7 @@ fn main() {
     let target = manifest.join("target").join(profile);
 
     // Copy static files to output
-    for file in ["dev.env", "fantasia.toml"] {
+    for file in ["dev.env", "fantasia_small.toml", "fantasia_full.toml"] {
         let src = manifest.join(file);
         let dst = target.join(file);
 
